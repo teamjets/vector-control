@@ -3,14 +3,17 @@
 #include <Wire.h>
 #include <ESP32Servo.h>
 
+// constructors for servos and MPU6050
 Servo servo_y1, servo_y2, servo_x1, servo_x2;
 Adafruit_MPU6050 mpu;
 
+// Constants for servo positions and gains
 const int neutral = 90;
 const float pitchGain = 1.5;
 const float yawGain = 1.5;
 const float rollGain = 1.5;
 
+// Variables to hold angles and timing
 float yawAngle = 0;
 float rollAngle = 0;
 unsigned long lastTime = 0;
@@ -25,6 +28,7 @@ void setup()
   Wire.begin();
   mpu.begin();
 
+  // Set the accelerometer and gyroscope ranges and filter bandwidth
   mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
   mpu.setGyroRange(MPU6050_RANGE_500_DEG);
   mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
@@ -38,20 +42,24 @@ void loop()
 {
   sensors_event_t a, g, temp;
   mpu.getEvent(&a, &g, &temp);
-
+  // Get the current time and calculate the time difference
   unsigned long currentTime = millis();
   float dt = (currentTime - lastTime) / 1000.0;
   lastTime = currentTime;
 
+  // Calculate the angles based on accelerometer and gyroscope data
   float pitchAngle = atan2(a.acceleration.y, sqrt(a.acceleration.x * a.acceleration.x + a.acceleration.z * a.acceleration.z)) * 180.0 / PI;
 
+  // Convert to degrees
   yawAngle += g.gyro.y * dt * 180.0 / PI;
   rollAngle += g.gyro.z * dt * 180.0 / PI;
 
+  // Limit the yaw and roll angles to prevent excessive values
   int pitchCorrection = pitchAngle * pitchGain;
   int yawCorrection = yawAngle * yawGain;
   int rollCorrection = rollAngle * rollGain;
 
+  // Constrain the corrections to prevent servo limits
   servo_y1.write(constrain(neutral + pitchCorrection + rollCorrection, 0, 180));
   servo_y2.write(constrain(neutral - pitchCorrection + rollCorrection, 0, 180));
   servo_x1.write(constrain(neutral - yawCorrection + rollCorrection, 0, 180));
